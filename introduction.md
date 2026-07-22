@@ -92,5 +92,3 @@ A: because threats and tech evolve constantly, so the loop feeds improvement fin
 - the fighter jet analogy in the author's note (why this module is theory only, no labs yet) is just framing, not testable content
 - the list of "areas of infosec" (network sec, app sec, cloud sec, IoT sec, etc) was condensed since it's just a category list with no mechanics behind it yet
 - the "purpose of infosec" bullet list (protect data, ensure continuity, compliance, reputation, IP, digital transformation) is largely restating confidentiality/integrity/availability from a business angle rather than new technical content
-
-*Q: did i skip anything that had an actual mechanism or formula attached to it? A: no, everything cut was narrative/business framing, not mechanics.*
