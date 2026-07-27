@@ -286,19 +286,72 @@ Q: why does IV reuse leak info even without knowing the WEP key? A: identical se
 
 phase 1 (joining/4-way handshake) is **identical** to WPA2 — see below. the entire difference is phase 2: how the per-packet key gets generated.
 
-|step|what happens|why|
-|---|---|---|
-|TK extracted from PTK|temporal key, feeds into TKIP||
-|TSC increments|48-bit TKIP sequence counter, one per packet|way bigger than WEP's 24-bit IV — kills fast reuse|
-|phase 1 key mixing|TK + TSC high bytes + client MAC → intermediate key|ties key to this device|
-|phase 2 key mixing|intermediate key + TSC low bytes → final per-packet RC4 key|guarantees uniqueness per packet|
-|RC4 keystream|same weak cipher as WEP, but genuinely unique seed now|keeps old hardware compatible|
-|Michael MIC|real cryptographic integrity check, replaces fake CRC32|actually detects tampering|
+| step                  | what happens                                                | why                                                |
+| --------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
+| TK extracted from PTK | temporal key, feeds into TKIP                               |                                                    |
+| TSC increments        | 48-bit TKIP sequence counter, one per packet                | way bigger than WEP's 24-bit IV — kills fast reuse |
+| phase 1 key mixing    | TK + TSC high bytes + client MAC → intermediate key         | ties key to this device                            |
+| phase 2 key mixing    | intermediate key + TSC low bytes → final per-packet RC4 key | guarantees uniqueness per packet                   |
+| RC4 keystream         | same weak cipher as WEP, but genuinely unique seed now      | keeps old hardware compatible                      |
+| Michael MIC           | real cryptographic integrity check, replaces fake CRC32     | actually detects tampering                         |
 
 **mental model**: WEP's flaw was architectural (a bad lock). WPA doesn't replace the lock, it rotates the pins slightly every use — better, but still trusting a fundamentally old design underneath. still built on RC4, and Michael MIC was deliberately weakened for speed → still crackable via chopchop-derived attacks, just not total key recovery like WEP.
 
 **mnemonic**: TTM → TSC, Two-phase mixing, Michael MIC.
+#### the full wpa pipeline
 
+| stage                                       | step                    | who                 | what happens                                                       | why                                                                                        |
+| ------------------------------------------- | ----------------------- | ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| **0. pre handshake**                        | psk entered             | alice               | password typed into device                                         | the one thing the human actually provides                                                  |
+|                                             | pmk derived             | both, independently | `pmk = pbkdf2(psk, ssid, 4096, 256)`                               | slow hash, resists brute force, both sides compute the same result without transmitting it |
+| **1. association**                          | open auth + association | alice ↔ ap          | normal wifi connect, no encryption yet                             | identical to wep at this stage                                                             |
+| **2. 4 way handshake**                      | message 1               | ap → alice          | sends anonce (random, plaintext)                                   | fresh randomness so this session's keys are unique                                         |
+|                                             | ptk derived             | alice               | `ptk = prf(pmk, anonce, snonce, mac_ap, mac_alice)`                | alice is first, she now has all 5 ingredients                                              |
+|                                             | message 2               | alice → ap          | sends snonce + mic (built from kck)                                | proves she derived correct ptk without sending it                                          |
+|                                             | ptk derived             | ap                  | same prf, now has both nonces                                      | verifies alice's mic matches its own                                                       |
+|                                             | message 3               | ap → alice          | sends gtk (wrapped with kek) + its own mic                         | ap proves itself back, mutual proof, delivers broadcast key                                |
+|                                             | message 4               | alice → ap          | ack                                                                | handshake complete, both sides now hold identical ptk + gtk                                |
+| **3. ptk slicing**                          | kck extracted           | both                | key confirmation key                                               | signs/verifies eapol messages (the mics above)                                             |
+|                                             | kek extracted           | both                | key encryption key                                                 | wraps/unwraps the gtk in message 3                                                         |
+|                                             | tk extracted            | both                | temporal key                                                       | the actual key that encrypts data frames                                                   |
+| **4. per packet encryption (tkip)**         | tsc increments          | both                | 48 bit counter, +1 every packet                                    | way bigger than wep's 24 bit iv, kills fast reuse                                          |
+|                                             | phase 1 mixing          | both                | tk + tsc high bits + client mac → intermediate key                 | expensive, run once per 65536 packets, ties key to device                                  |
+|                                             | phase 2 mixing          | both                | intermediate key + tsc low bits → per packet rc4 key               | cheap, run every packet, guarantees per packet uniqueness                                  |
+|                                             | rc4 keystream           | both                | same old cipher, but genuinely unique seed now                     | keeps old hardware compatible                                                              |
+|                                             | michael mic             | both                | real cryptographic integrity check                                 | replaces wep's forgeable crc32                                                             |
+| **4alt. per packet encryption (ccmp/wpa2)** | aes ccm                 | both                | tk directly used with aes in ccm mode                              | encryption + integrity in one pass, no separate mic keys needed                            |
+| **5. group traffic**                        | gtk usage               | both                | broadcast/multicast frames encrypted with shared gtk instead of tk | everyone needs to decrypt the same broadcast frame                                         |
+|                                             | gtk rotation            | ap                  | regenerates + redistributes gtk when a device disconnects          | prevents departed devices from still decrypting broadcast traffic                          |
+
+#### the acronym master list
+
+| acronym | stands for                                  |
+| ------- | ------------------------------------------- |
+| wpa     | wi-fi protected access                      |
+| psk     | pre-shared key                              |
+| pmk     | pairwise master key                         |
+| ptk     | pairwise transient key                      |
+| tk      | temporal key                                |
+| kck     | key confirmation key                        |
+| kek     | key encryption key                          |
+| gtk     | group temporal key                          |
+| anonce  | authenticator nonce                         |
+| snonce  | supplicant nonce                            |
+| mic     | message integrity code                      |
+| tsc     | tkip sequence counter                       |
+| tkip    | temporal key integrity protocol             |
+| ccmp    | counter mode cbc mac protocol               |
+| eapol   | extensible authentication protocol over lan |
+| prf     | pseudo random function                      |
+| pbkdf2  | password based key derivation function 2    |
+
+### the throughline, one sentence each layer
+
+- **pmk**: proves you know the password, without sending it
+- **ptk**: unique key per session, derived not transmitted
+- **kck/kek**: split ptk so handshake proof and key wrapping don't share a key
+- **tsc mixing**: unique key per packet, so rc4's weakness can't be exploited
+- **gtk**: separate shared key, because broadcast traffic can't use a private per device key
 ---
 
 #### WPA2 / CCMP-AES (real fix, but only in phase 2)
@@ -340,12 +393,12 @@ Q: why mix MAC address into PTK derivation instead of just PMK+nonces? A: ties t
 
 **WPA2 attack tooling** (crypto itself is never attacked, target is the password):
 
-|tool|job|
-|---|---|
-|airodump-ng|monitors for a client (re)connecting, captures 4-way handshake|
-|aireplay-ng (deauth)|forges deauth frames — 802.11 mgmt frames are unauthenticated — forces reconnect on demand|
-|hashcat / aircrack-ng|offline crack: tries password candidates through PBKDF2→PMK→PTK→MIC, checks against captured MIC|
-|PMKID attack (hcxtools)|grabs PMKID directly from AP, skips needing a full handshake or connected client at all|
+| tool                    | job                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------ |
+| airodump-ng             | monitors for a client (re)connecting, captures 4-way handshake                                   |
+| aireplay-ng (deauth)    | forges deauth frames — 802.11 mgmt frames are unauthenticated — forces reconnect on demand       |
+| hashcat / aircrack-ng   | offline crack: tries password candidates through PBKDF2→PMK→PTK→MIC, checks against captured MIC |
+| PMKID attack (hcxtools) | grabs PMKID directly from AP, skips needing a full handshake or connected client at all          |
 
 ---
 
@@ -353,11 +406,11 @@ Q: why mix MAC address into PTK derivation instead of just PMK+nonces? A: ties t
 
 **core structural difference:**
 
-||personal|enterprise|
+| criteria          |personal|enterprise|
 |---|---|---|
-|credential|one shared PSK for everyone|unique per-user creds/cert|
-|who checks it|the AP itself|central RADIUS server, AP just relays|
-|revoking one user|must change password for everyone|disable that one account|
+| credential        |one shared PSK for everyone|unique per-user creds/cert|
+| who checks it     |the AP itself|central RADIUS server, AP just relays|
+| revoking one user |must change password for everyone|disable that one account|
 
 **the actors:**
 
@@ -379,12 +432,12 @@ flow: 802.1X blocks the port until EAP auth completes → EAP method negotiated 
 
 **core problem it fixes**: WPA2's PMK is a pure local computation (`PBKDF2(PSK,SSID)`) — attacker captures one handshake, brute forces offline forever, unlimited speed. WPA3 replaces this with **SAE** (Simultaneous Authentication of Equals, aka the Dragonfly handshake) — every single password guess requires a live round-trip with the AP, so offline cracking is dead.
 
-||WPA2|WPA3|
+| criteria         |WPA2|WPA3|
 |---|---|---|
-|PMK source|local PBKDF2 computation|live SAE exchange only|
-|offline cracking|trivial, GPU-bound|not possible, AP-interaction-bound|
-|cipher mode|AES-CCMP|AES-GCMP (modernization, not a security fix — AES-CCM was never broken)|
-|forward secrecy|no — old PSK compromise decrypts old captures|yes — fresh secrets each session|
+| PMK source       |local PBKDF2 computation|live SAE exchange only|
+| offline cracking |trivial, GPU-bound|not possible, AP-interaction-bound|
+| cipher mode      |AES-CCMP|AES-GCMP (modernization, not a security fix — AES-CCM was never broken)|
+| forward secrecy  |no — old PSK compromise decrypts old captures|yes — fresh secrets each session|
 
 **important nuance**: unlike WEP→WPA→WPA2, this isn't "encryption was broken and got fixed." AES-CCM was never cracked. GCMP is purely a performance/standardization upgrade. the actual security jump lives entirely in phase 1 (the handshake).
 
