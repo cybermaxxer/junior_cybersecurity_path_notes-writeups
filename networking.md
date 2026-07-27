@@ -1,3 +1,4 @@
+Pre scriptum: this specific md also contains information from third resources that complements the HTB's learning material
 ## Table of Contents
 
 * [1. The 80/20 Digest](#1-the-8020-digest)
