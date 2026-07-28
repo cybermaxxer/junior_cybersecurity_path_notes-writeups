@@ -1,4 +1,4 @@
- htb junior cybersecurity path notes
+	 htb junior cybersecurity path notes
 
 personal study notes for hack the box's **junior cybersecurity analyst** path, one markdown file per section/module. built for fast review, not for reading front to back.
 
