@@ -22,8 +22,6 @@ notes built from the htb academy linux module theory pages plus my own exercise 
    * [section 22: disks](#section-22-disks)
 2. [structured breakdown (cheat sheet)](#2-structured-breakdown-cheat-sheet)
 3. [feynman checks](#3-feynman-checks)
-4. [omitted chuff (the 80% noise)](#4-omitted-chuff-the-80-noise)
-
 ---
 
 ## 1. the 80/20 digest
@@ -356,15 +354,3 @@ Q: which command would you reach for to quickly see which partition is mounted w
 2. **you hit a wrong count with `locate '.log' | wc -l` but got it right with `find`. what's the underlying reason, and when would you deliberately still prefer `locate`?** `locate` queries a periodically rebuilt index, not the live disk, so anything created/deleted since the last `updatedb` run won't be reflected. you'd still prefer `locate` on a huge filesystem where speed matters more than perfect freshness, e.g. searching for old, unchanging files.
     
 3. **in the section 21 lab, why does the ssh key need `-N ""` and why does `~/.ssh` need `chmod 700` specifically, not just "restrictive enough"?** `-N ""` sets an empty passphrase because cron runs the backup script unattended, nothing can type a passphrase at 3am. `chmod 700` isn't arbitrary either: ssh actively checks the permission bits on `.ssh` and its key files, and refuses to use them if group/other have any access, it's a hardcoded safety check, not a suggestion.
-    
-
----
-
-## 4. omitted chuff (the 80% noise)
-
-- html page furniture from the pdf exports (page numbers, "mark complete & next", timestamps, "shellsession" labels) all stripped
-- section 14 had no exercise logged, and section 16 wasn't in your log at all, both skipped
-- section 23 header appeared with no content under it in your log, skipped
-- repeated boilerplate across htb pages (breadcrumbs, "hack the box academy" headers) not carried over
-
-Q: did i skip anything in sections 14, 16, or 23 that you actually did work through but just didn't log? if so let me know and i'll fold it in.
