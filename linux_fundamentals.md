@@ -1,5 +1,8 @@
-## Table of Contents
+# Linux Fundamentals: my notes
 
+full HTB Linux Fundamentals module, all 30 sections, plus whatever I actually ran on my own box along the way ("my personal actions" under each section).
+
+## Table of Contents
 - [1. Module Digest](#1-module-digest)
   - [1.1 Linux Structure](#11-linux-structure)
   - [1.2 Linux Distributions](#12-linux-distributions)
@@ -33,7 +36,6 @@
   - [1.30 Shortcuts](#130-shortcuts)
 - [2. Structured Breakdown (Cheat Sheet)](#2-structured-breakdown-cheat-sheet)
 - [3. Feynman Checks](#3-feynman-checks)
-
 ---
 
 ## 1. Module Digest
@@ -96,9 +98,35 @@ Q: why does `/etc/passwd` being plain text matter offensively? A: it (and files 
 
 ---
 
-### 1.2 (not in source material)
+### 1.2 Linux Distributions
 
-not present in `combined.md`. based on the module's numbering this slot likely covers the filesystem itself (as opposed to 1.1's high level structure), but I'm not going to guess at content that wasn't provided.
+distros are just the linux kernel plus a specific bundle of packages, config, and philosophy on top. think of them as franchises running on the same brand: same core components and architecture under the hood, different product lineup depending on who they're built for. mainstream ones: Ubuntu, Fedora, CentOS, Debian, RHEL.
+
+why linux at all: free, open source, endlessly customizable, that's the appeal for desktops (Ubuntu/Fedora are the easy on ramps) and for servers (stable, secure, frequent updates). for cybersecurity work specifically it's the open source part that matters most, being able to actually read and modify the source means a distro can be stripped down to exactly what a given engagement needs instead of working around a black box.
+
+**distros that come up constantly in security work:**
+
+|distro|notes|
+|---|---|
+|ParrotOS|security focused, this is what Pwnbox runs|
+|Kali Linux|the most recognized pentesting distro, huge security tool set out of the box|
+|Ubuntu|dominant desktop choice, also a common general purpose server OS|
+|Debian|especially common for servers and embedded systems|
+|Raspberry Pi OS|for Pi hardware specifically|
+|CentOS / RHEL|enterprise environments|
+|BackBox, BlackArch, Pentoo|other security focused distros, less common than Parrot/Kali|
+
+what actually differs between distros isn't the kernel, it's the included packages, the UI, and the tooling layered on top.
+
+**Debian, specifically:**
+
+- package management via **apt** (Advanced Package Tool), handles fetching and installing updates/security patches, can run manually or on a schedule.
+- steeper learning curve than something like Ubuntu, but more flexible/customizable as the tradeoff, more control tends to feel more complex up front.
+- worth the up front cost: skipping the depth and doing everything the "easy" way ends up costing more time later, once the actual commands are second nature (same logic that makes learning `grep`/`find` properly pay off over always reaching for a GUI file manager).
+- long term support releases: security patches for up to 5 years, part of why it's a common pick for servers that need to stay up continuously.
+- has had vulnerabilities like anything else, the fast patch turnaround and established security track record are why it's still trusted for security sensitive deployments.
+
+Q: why can a pentest distro (Parrot, Kali) and a plain desktop distro (Ubuntu) both be "linux" but feel completely different day to day? A: they share the same kernel and core architecture, what differs is entirely the package selection and configuration layered on top, that's the whole point of a distro existing as a concept separate from the kernel itself.
 
 ---
 
@@ -144,7 +172,7 @@ added a timestamp to the default Parrot prompt by inserting `\@` (current time, 
 export PS1="\[\e]0;\u@\h:\w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\@\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$"
 ```
 
-breaking down what changed: the original prompt was `...\u@\h\[\033[00m\]:...`, i.e. username `@` hostname, then a color reset, then the cwd. I inserted `\@` between `\h` and the color reset escape, so the visible prompt now reads `user@host<time>:cwd$` instead of just `user@host:cwd$`. per the table above, `\@` renders as the current time, this is the same trick the module describes for tracking actions during an engagement: a plain `user@host` prompt tells you who and where, adding `\@` tells you when, which matters once you're correlating prompt output against `.bash_history` or a captured terminal log.
+breaking down what changed: the original prompt was `...\u@\h\[\033[00m\]:...`, i.e. username `@` hostname, then a color reset, then the cwd. I inserted `\@` between `\h` and the color reset escape, so the visible prompt now reads `user@host<time>:cwd$` instead of just `user@host:cwd$`. per the table above, `\@` renders as the current time. a plain `user@host` prompt tells you who and where, adding `\@` tells you when too, which matters once you're correlating prompt output against `.bash_history` or a captured terminal log.
 
 ---
 
@@ -166,9 +194,52 @@ Q: you don't know if a tool supports `--help` or `-h`, what do you try first? A:
 
 ---
 
-### 1.6 (not in source material)
+### 1.6 System Information
 
-not present in `combined.md`. your personal log has an entry numbered "section 6" (basic `uname`, `cd`/`pwd`, `env` inspection, `ifconfig` MTU) that would slot in here by the module's own numbering, so it's kept below even without HTB content to pair it with.
+first real hands on section: pulling system details off a live box (identity, processes, network config, users, directories). this is the exact same enumeration you'd do on an actual assessment, not just a fundamentals drill.
+
+**core info gathering commands:**
+
+|command|shows|
+|---|---|
+|`whoami`|current username|
+|`id`|current user's UID/GID and full group membership|
+|`hostname`|the machine's name|
+|`uname`|OS name and hardware info|
+|`pwd`|current working directory|
+|`ifconfig`|network interface addresses/config (legacy, `ip` is the modern replacement, see 1.24)|
+|`ip`|routing, devices, interfaces, tunnels|
+|`netstat`|network status|
+|`ss`|socket investigation, the modern `netstat` replacement|
+|`ps`|process status|
+|`who`|who's currently logged in|
+|`env`|environment variables|
+|`lsblk`|block devices|
+|`lsusb`|USB devices|
+|`lsof`|open files|
+|`lspci`|PCI devices|
+
+connecting to a box for this kind of enumeration is standard SSH: `ssh htb-student@<ip>`. SSH is the default for admin access to linux specifically because it's old, proven, and needs no GUI, which is exactly what keeps it fast and light on resources.
+
+**`whoami` / `id`, why these matter first:** land a reverse shell on a box and `whoami` is the very first situational awareness check, tells you what user you're actually running as. `id` builds on that by showing full group membership, and specific groups are worth flagging immediately: `adm` means you can read `/var/log` (a potential info leak), `sudo` means you can run some or all commands as root, which is either a direct privesc path or, from a defender's seat, something to go audit and tighten.
+
+**`uname`, the flags that matter:**
+
+|flag|prints|
+|---|---|
+|`-a`|everything below, in this order (skips `-p`/`-i` if unknown)|
+|`-s`|kernel name|
+|`-n`|hostname|
+|`-r`|kernel release|
+|`-v`|kernel version|
+|`-m`|machine hardware name|
+|`-p`|processor type|
+|`-i`|hardware platform|
+|`-o`|operating system|
+
+`uname -r` on its own is the one worth remembering: pulls just the kernel release string, exactly what you'd feed into a search for known kernel exploits (e.g. `4.15.0-99-generic exploit`).
+
+Q: why check `id` right after `whoami` instead of just stopping at the username? A: `whoami` only tells you who you are, `id` tells you what that identity can actually do, group membership like `sudo` or `adm` is the difference between "just a regular user" and "one command away from root" or "can already read sensitive logs."
 
 #### my personal actions
 
@@ -176,7 +247,7 @@ worked through a short interactive lab covering basic system/environment inspect
 
 1. `uname -m`: machine hardware name (CPU architecture, e.g. `x86_64`).
 2. `cd ~` then `pwd`: confirmed home directory and current working directory.
-3. `env`: listed environment variables, looked up `$MAIL` specifically (points at the local mailbox file for the current user, historically `/var/mail/<user>` or similar).
+3. `env`: listed environment variables, looked up `$MAIL` specifically, points at the user's local mailbox file, `/var/mail/<user>`.
 4. `env` again, this time looking up `$SHELL` (path to the user's default login shell, e.g. `/bin/bash`).
 5. `uname -s` (found via `uname --help`): prints just the kernel name (`Linux`), as opposed to `uname -a`'s full string.
 6. `ifconfig | grep 1500`: filtered `ifconfig` output for the string `1500`, which is the default Ethernet **MTU** (Maximum Transmission Unit): the largest packet size, in bytes, an interface can send in one frame without fragmenting it. grepping for the number is a quick way to spot which interfaces are using non default MTUs (jumbo frames, tunnels, etc), since anything that isn't `1500` on a standard wired interface is worth a second look.
@@ -215,7 +286,7 @@ hidden files/directories (dotfiles, e.g. `.bashrc`, `.bash_history`) only show u
 #### my personal actions
 
 - `ls -alps`: listed all files (`-a`), long format (`-l`), human unfriendly but exact (`-p` appends `/` to directory names, `-s` shows allocated block size per entry). used this to get a full, unambiguous inventory of a directory including hidden entries and their on disk size.
-- `ls -i | grep sudoers`: `-i` prints each file's **inode number** (the filesystem's internal ID for the file, separate from its name), piped through `grep` to isolate the `sudoers` file's inode specifically. this is the same technique the module's own quiz question was built around (finding the inode number of a specific file in `/etc`), inode numbers matter because two different filenames can point at the same inode (hard links), so grepping by inode is a way to track a file's real identity independent of what it's currently named.
+- `ls -i | grep sudoers`: `-i` prints each file's **inode number** (the filesystem's internal ID for the file, separate from its name), piped through `grep` to isolate the `sudoers` file's inode specifically. this is exactly how you find the inode number of a specific file in `/etc`. inode numbers matter because two different filenames can point at the same inode (hard links), so grepping by inode is a way to track a file's real identity independent of what it's currently named.
 
 ---
 
@@ -232,7 +303,7 @@ the linux equivalent of drag and drop file management, done from the shell:
 |`mv`|`mv <src> <dst>`|move **and** rename (same command does both, the distinction is purely "did the path change directory or just name")|
 |`cp`|`cp <src> <dst>`|copy|
 
-worked example from the module, building up a structure step by step:
+quick worked example, building up a structure step by step:
 
 ```bash
 touch info.txt
@@ -245,7 +316,7 @@ mv information.txt readme.txt Storage/
 cp Storage/readme.txt Storage/local/
 ```
 
-deletion (`rm`, `rmdir`) wasn't walked through step by step in the source material, it was left as a self directed exercise, the reasoning being that looking things up yourself is part of building real proficiency, not "cheating." for reference: `rm <file>` deletes a file, `rm -r <dir>` recursively deletes a directory and its contents, `rmdir <dir>` only deletes an already empty directory.
+never actually got walked through deletion (`rm`, `rmdir`), left that as a self directed exercise. for reference: `rm <file>` deletes a file, `rm -r <dir>` recursively deletes a directory and its contents, `rmdir <dir>` only deletes an already empty directory.
 
 Q: why does `mv` handle both "rename" and "move" as literally the same operation? A: because a rename is just a move within the same directory, from the filesystem's perspective there's no meaningful difference, both are "change this path to that path."
 
@@ -349,7 +420,7 @@ also (logged separately but same topic): tried `locate '.log' | wc -l` first and
 
 ### 1.11 File Descriptors and Redirections
 
-a **file descriptor (FD)** is a kernel maintained reference number for an open file, socket, or other I/O resource, the mental model the module uses is a coat check ticket: the ticket (FD) isn't the coat (the actual resource), it's how the system knows which resource you mean when you hand it over.
+a **file descriptor (FD)** is a kernel maintained reference number for an open file, socket, or other I/O resource. I think of it like a coat check ticket: the ticket (FD) isn't the coat (the actual resource), it's how the system knows which resource you mean when you hand it over.
 
 the first three FDs exist by default on every process:
 
@@ -371,7 +442,7 @@ the first three FDs exist by default on every process:
 |`<<EOF`|heredoc: stream input until the literal `EOF` marker|
 |`\|`|pipe: feed one command's STDOUT into the next command's STDIN|
 
-worked progression from the module:
+worked progression, ran this start to finish:
 
 ```bash
 find /etc/ -name shadow                          # errors and results interleaved
@@ -394,21 +465,86 @@ Q: what's the actual difference between `>` and `>>`? A: `>` truncates (overwrit
 
 ---
 
-### 1.12 (not in source material)
+### 1.12 Filter Contents
 
-not present in `combined.md`, but your log has an entry numbered "section 12" that would slot in here by the module's own numbering, kept below even without HTB content to pair it with.
+reading files without opening an editor. **`more`** and **`less`** are pagers, they let you scroll a file interactively, one screen at a time, without touching the file itself, exactly what you want for a log or config too big to just dump into the terminal.
+
+```bash
+cat /etc/passwd | more   # opens at the top, [Q] quits, output stays on screen after
+less /etc/passwd          # same idea, more features (search, scroll both ways), [Q] quits and clears the output
+```
+
+the actual difference that matters day to day: `more` leaves what you scrolled through sitting in your terminal history after you quit, `less` doesn't. `less` also lets you scroll backward, `more` traditionally doesn't.
+
+**`head` / `tail`**: first or last N lines of a file, 10 by default.
+
+```bash
+head /etc/passwd   # first 10 lines
+tail /etc/passwd   # last 10 lines
+```
+
+**`sort`**: alphabetical/numeric ordering, nothing fancy, `cat /etc/passwd | sort` and the output stops starting with `root` and goes alphabetical instead.
+
+**`grep`**, pattern matching, the workhorse:
+
+```bash
+cat /etc/passwd | grep "/bin/bash"              # only lines containing this exact string
+cat /etc/passwd | grep -v "false\|nologin"       # -v inverts: exclude lines matching either pattern
+```
+
+**`cut`**: pull out one field from a delimited line. `-d` sets the delimiter, `-f` sets which field (1 indexed).
+
+```bash
+cat /etc/passwd | grep -v "false\|nologin" | cut -d":" -f1   # just the usernames, field 1 of a colon delimited line
+```
+
+**`tr`**: swap one character for another across the whole input, first arg is what to replace, second is what to replace it with.
+
+```bash
+cat /etc/passwd | grep -v "false\|nologin" | tr ":" " "   # colons become spaces
+```
+
+**`column -t`**: takes messy whitespace separated output and lines it up into an actual table. useful right after a `tr` pass like the one above, though it can misalign if a field itself contains a comma or extra whitespace (exactly what happens to the `postgres` row below, its GECOS field has a comma in it, throwing off the column count).
+
+**`awk`**: real field based processing. `{print $1, $NF}` prints the first field and the last field of every line, `$1` is always field one, `$NF` is always the _last_ field regardless of how many fields there are, which is exactly what fixes the `postgres` misalignment `column -t` couldn't handle, `awk` doesn't care how many fields are in between.
+
+```bash
+cat /etc/passwd | grep -v "false\|nologin" | tr ":" " " | awk '{print $1, $NF}'
+```
+
+**`sed`**: stream editor, mainly used here for substitution. `s/pattern/replacement/g`, the `s` is the substitute command, `g` means replace every match on the line, not just the first.
+
+```bash
+... | sed 's/bin/HTB/g'   # every "bin" becomes "HTB"
+```
+
+**`wc -l`**: count lines. tacked onto the end of a pipeline, it turns "here's a filtered list" into "here's how many results matched."
+
+**the whole thing chained together**, building from raw file to a final count:
+
+```bash
+cat /etc/passwd \
+  | grep -v "false\|nologin" \
+  | tr ":" " " \
+  | awk '{print $1, $NF}' \
+  | wc -l
+```
+
+read right to left in terms of intent, left to right in terms of execution: start with the raw file, drop the accounts you don't care about, normalize the delimiter, pull just the two fields that matter, count what's left. every tool in this chain does exactly one job, that's the whole unix philosophy from section 1.1 in practice, not just theory.
+
+Q: `column -t` misaligns the `postgres` row but `awk '{print $1, $NF}'` handles it fine, why? A: `column -t` just lines up whatever whitespace separated fields it sees, it has no idea which fields are "supposed" to exist, so an extra comma inside one field (like `postgres`'s GECOS entry) throws the whole row out of alignment. `awk`'s `$NF` always grabs the actual last field no matter how many fields came before it, so it doesn't matter if a row has an extra token in the middle, the ends are still the ends.
 
 #### my personal actions
 
-- `ss -tnlp4 | grep -E '0.0.0.0:[0-9]+' | wc -l` — `ss` is the modern replacement for `netstat`, `-t` filters to TCP, `-n` skips DNS resolution (numeric output only, faster and avoids leaking lookups), `-l` shows only listening sockets, `-4` restricts to IPv4. piping through `grep -E '0.0.0.0:[0-9]+'` isolates sockets bound to all interfaces (`0.0.0.0`, as opposed to a single specific IP), then `wc -l` counts them, a quick way to get "how many services are listening on every interface" as a single number.
-- first tried `ss -tlp | grep -i proftp` to find the ProFTPD process, came back empty, switched to `ps aux | grep -i proftp` instead and found it that way. worth flagging as a lesson: `ss -tlp` only shows sockets that are actually listening right now, if the service is running but not currently bound the way you expect (or the grep pattern doesn't match how `ss` labels it), `ps aux` is the more reliable fallback since it searches process names/command lines directly rather than socket state.
+- `ss -tnlp4 | grep -E '0.0.0.0:[0-9]+' | wc -l`: `ss` is the modern replacement for `netstat`, `-t` filters to TCP, `-n` skips DNS resolution (numeric output only, faster and avoids leaking lookups), `-l` shows only listening sockets, `-4` restricts to IPv4. piping through `grep -E '0.0.0.0:[0-9]+'` isolates sockets bound to all interfaces (`0.0.0.0`, as opposed to a single specific IP), then `wc -l` counts them, came out to 7 services listening on all interfaces on that box.
+- first tried `ss -tlp | grep -i proftp` to find the ProFTPD process, came back empty, switched to `ps aux | grep -i proftp` instead and found it running under the `proftpd` user that way. worth flagging as a lesson: `ss -tlp` only shows sockets that are actually listening right now, if the service is running but not currently bound the way you expect (or the grep pattern doesn't match how `ss` labels it), `ps aux` is the more reliable fallback since it searches process names/command lines directly rather than socket state.
 - back on the Pwnbox side, ran a one liner to enumerate every unique link on a website:
     
     ```bash
     curl -s https://www.inlanefreight.com | tr " " "\n" | tr "'" '"' | grep -E '"(https?://www.inlanefreight\.com)?/[^/][^"]*' | cut -d '"' -f 2 | sort -u | wc -l
     ```
     
-    reading it left to right: `curl -s` fetches the page quietly (no progress meter), the two `tr` calls split the HTML on spaces (one "token" per line) and normalize single quotes to double quotes so the next step has one consistent quote style to match against, `grep -E` pulls out anything that looks like a link (either a bare `/path` or a full `https://www.inlanefreight.com/path`) still wrapped in its surrounding quote character, `cut -d '"' -f 2` strips the quotes off to leave just the path/URL itself, `sort -u` deduplicates, `wc -l` gives the final count. a crude but genuinely effective way to enumerate a site's internal links without a real crawler.
+    reading it left to right: `curl -s` fetches the page quietly (no progress meter), the two `tr` calls split the HTML on spaces (one "token" per line) and normalize single quotes to double quotes so the next step has one consistent quote style to match against, `grep -E` pulls out anything that looks like a link (either a bare `/path` or a full `https://www.inlanefreight.com/path`) still wrapped in its surrounding quote character, `cut -d '"' -f 2` strips the quotes off to leave just the path/URL itself, `sort -u` deduplicates, `wc -l` gives the final count, 34 unique paths on that site. a crude but genuinely effective way to enumerate a site's internal links without a real crawler.
 
 ---
 
@@ -440,7 +576,7 @@ Q: why does `grep -E "(my.*false)"` fail to match a line where `false` appears b
 
 #### my personal actions
 
-worked through the module's six optional regex exercises against `/etc/ssh/sshd_config`:
+worked through six optional regex exercises against `/etc/ssh/sshd_config`:
 
 1. `grep -v '#'`: `-v` inverts the match, so this shows every line that does **not** contain `#` (i.e. strips comments).
 2. `grep -E '^Permit'`: `^` anchors to line start, matches lines where a word starts with `Permit`.
@@ -629,7 +765,7 @@ Q: what's the actual difference between a systemd timer and a plain cron job? A:
 
 ### 1.19 Network Services
 
-a network service is any daemon that listens on a port and talks to other hosts. the module walks through several core ones:
+a network service is any daemon that listens on a port and talks to other hosts. the core ones worth knowing:
 
 **SSH (Secure SHell)**, port 22: encrypted remote shell access. config at `/etc/ssh/sshd_config` (server side) and `~/.ssh/config` (client side). key based auth (public key on the server in `~/.ssh/authorized_keys`, private key held by the client) is preferred over password auth since it's not brute forceable in any practical sense and can be set up passphrase free for automation.
 
@@ -663,7 +799,7 @@ logged the full `/etc/exports` option table above verbatim as a reference, flagg
 
 ### 1.20 Working with Web Services
 
-two ways to spin up a throwaway HTTP server for quick file transfers or testing, both covered in the module:
+two ways to spin up a throwaway HTTP server for quick file transfers or testing:
 
 **python's built in server:**
 
@@ -692,7 +828,7 @@ Q: why would you reach for the PHP server over the python one specifically? A: i
     ```
     
     `npm install http-server` installs the `http-server` package locally, `npx http-server -p 8080` runs it without needing a separate global install step, `-p 8080` sets the listening port.
-- separately, ran `php -S 127.0.0.1:8080` after finding the flag via `php --help | grep 'server'`, matching the module's own example above.
+- separately, ran `php -S 127.0.0.1:8080` after finding the flag via `php --help | grep 'server'`, same idea as the python one above.
 
 ---
 
@@ -721,7 +857,7 @@ Q: why does `-a` matter more than just `-r` (recursive) alone? A: `-r` only hand
 
 #### my personal actions
 
-built the module's full optional lab end to end, an automated, passwordless, SSH backed backup running on a schedule:
+built the whole optional lab end to end, an automated, passwordless, SSH backed backup running on a schedule:
 
 **1. mock data:**
 
@@ -1185,14 +1321,17 @@ Q: you're mid way through typing a long command and realize the first half is wr
 |#|section|core commands/files|one line takeaway|
 |---|---|---|---|
 |1.1|Linux Structure|`/etc`, `/var`, `/bin`, `/boot`|everything is a file, config lives in plain text|
+|1.2|Linux Distributions|`apt` (Debian)|same kernel everywhere, distros differ in packages/UI/tooling only|
 |1.3|Introduction to Shell|bash|the shell is the CLI to the kernel, terminal is just the window it runs in|
 |1.4|Prompt Description|`PS1`, `\u \h \w \@`|the prompt is a customizable template, not a fixed string|
 |1.5|Getting Help|`man`, `--help`, `apropos`|`apropos <keyword>` finds tools you didn't know the name of|
+|1.6|System Information|`whoami`, `id`, `uname -r`|`id`'s group membership is the real signal, not just the username|
 |1.7|Navigation|`pwd`, `ls -la`, `cd -`|`cd -` jumps back to the previous directory, one entry history|
 |1.8|Working with Files/Dirs|`touch`, `mkdir -p`, `mv`, `cp`|`mv` = rename, a rename is just a same directory move|
 |1.9|Editing Files|`nano`, `vim`, `vimtutor`|vim is modal: keystrokes are commands, not text, until you enter Insert mode|
 |1.10|Find Files and Dirs|`which`, `locate`, `find`|`locate` reads a cached index, `find` walks the live filesystem|
 |1.11|File Descriptors|`>` `>>` `2>` `\|`|FD 0/1/2 = STDIN/STDOUT/STDERR, `2>/dev/null` silences errors only|
+|1.12|Filter Contents|`grep -v`, `cut -d -f`, `awk '{print $1,$NF}'`|`$NF` always grabs the real last field, `column -t` breaks if a field has a stray comma|
 |1.13|Regular Expressions|`grep -E`, `^ $ .* \|`|`.*` between two terms is an ordered AND, not a true unordered AND|
 |1.14|Permission Management|`chmod`, `chown`, SUID/SGID|octal = r(4)+w(2)+x(1) per actor, SUID runs as the file's owner|
 |1.15|User Management|`useradd -m -s -G -g`, `/etc/shadow`|`useradd` needs `-m` explicitly, home dirs aren't automatic|
