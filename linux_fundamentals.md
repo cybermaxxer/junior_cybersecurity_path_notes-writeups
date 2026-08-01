@@ -37,7 +37,6 @@ full HTB Linux Fundamentals module, all 30 sections, plus whatever I actually ra
 - [2. Structured Breakdown (Cheat Sheet)](#2-structured-breakdown-cheat-sheet)
 - [3. Feynman Checks](#3-feynman-checks)
 ---
-
 ## 1. Module Digest
 
 ### 1.1 Linux Structure
