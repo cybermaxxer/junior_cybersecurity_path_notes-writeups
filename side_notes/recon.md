@@ -1,7 +1,3 @@
-persona: penetration tester, linux/windows internals
-
-tl;dr: local enum after getting a shell has two tracks: commands that dump system state, and files/registry hives that hold creds or privesc paths. linux: check suid bits, sudo rights, cron, bash history, writable paths. windows: check whoami privileges, autorun registry keys, SAM/SYSTEM hives, scheduled tasks, powershell history. linpeas/winpeas automate most of this but you should know the manual commands since they're what the tools wrap.
-
 ## linux: recon commands
 
 | command | breakdown | why |
@@ -55,12 +51,3 @@ the `/` vs `-` flag style split isn't arbitrary logic you can derive, it's just 
 | unattended install files: `C:\Windows\Panther\Unattend.xml`, `sysprep.inf` | sometimes contain plaintext local admin creds left over from deployment |
 | powershell history: `%userprofile%\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt` | windows equivalent of bash_history, literal past commands |
 | `HKCU\Software\...` and `HKLM\Software\...` run keys (both) | check both hives, not just one, since current user and machine wide autoruns differ |
-
-mnemonic for the linux quick pass: **SPECS**: Sudo rights, Perms (suid), Env vars, Cron jobs, Shell history.
-mnemonic for windows: **WARPS**: Whoami /priv, Autoruns (run keys), Registry services, PSReadLine history, Scheduled tasks.
-
-both linpeas and winpeas exist specifically to automate every row above plus a lot more, they're the industry standard first script to run once you have a shell. worth knowing the manual commands first though since tools get flagged by edr and you'll need to do this by hand eventually.
-
-feynman check:
-1. why check `find / -perm -4000` specifically instead of just listing all files? → because SUID binaries run with the file owner's privileges regardless of who executes them, so a misconfigured SUID binary owned by root is a direct path to running code as root.
-2. why does `netstat -ano`'s `-n` flag matter for recon speed/stealth? → it skips reverse dns lookups on every ip, which is both faster and avoids generating extra network traffic/queries that could get logged or noticed.
