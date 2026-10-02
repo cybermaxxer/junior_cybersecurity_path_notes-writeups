@@ -1,4 +1,4 @@
-# how to remember shit when bashing or powershelling
+# how to remember stuff when bashing or powershelling
 
 **tl;dr:** don't memorize syntax, memorize your way of finding it. remember the intent ("list services", "find big files"), guess the command from naming patterns, look it up in under 10 seconds, then save what you looked up twice. keep about 20 to 30 daily commands in your head and let tools hold the rest.
 
