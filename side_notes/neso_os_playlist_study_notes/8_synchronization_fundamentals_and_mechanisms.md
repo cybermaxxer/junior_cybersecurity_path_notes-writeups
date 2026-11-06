@@ -7,19 +7,19 @@
 | # | video | link | transcript status |
 |---|---|---|---|
 | 1 | Process Synchronization | https://www.youtube.com/watch?v=ph2awKa8r5Y | available |
-| 2 | *(title not in the transcript file; per the lecture order and the next lecture's opening, this is the critical section problem)* | https://www.youtube.com/watch?v=UtEORPakw5Y | **missing** |
+| 2 | The Critical-Section Problem | https://www.youtube.com/watch?v=UtEORPakw5Y | **no transcript; partial notes from 2 screenshots** |
 | 3 | Peterson's Solution | https://www.youtube.com/watch?v=gYCiTtgGR5Q | available |
-| 4 | *(title not in the transcript file; the semaphore lecture opens by recapping "various hardware based solutions", so this one is inferred to be hardware synchronization)* | https://www.youtube.com/watch?v=5oZYS5dTrmk | **missing** |
+| 4 | Test and Set Lock | https://www.youtube.com/watch?v=5oZYS5dTrmk | **no transcript; partial notes from 3 screenshots** |
 | 5 | Semaphores | https://www.youtube.com/watch?v=XDIOC2EY5JE | available |
 | 6 | Disadvantages of Semaphores | https://www.youtube.com/watch?v=2cGo2HdA0dM | available |
 
-> **missing source material, stated plainly:** no transcripts exist in my source file for videos 2 and 4 above (the transcript file marks them "no transcript"). i did **not** write notes for what those lectures taught. where i mention the critical section problem's requirements below, they come from how the *other* lectures in this chapter and chapter 9 define them. for the critical section problem lecture itself and the hardware solutions lecture, watch the videos.
+> **partial source material, stated plainly:** the transcript file has no transcript for videos 2 and 4 above. those two sections are built only from screenshots of the slides (The Critical-Section Problem at 4:40 and 13:10 of 13:49; Test and Set Lock at 6:54, 16:37 and 18:47 of 19:00). whatever the speaker said between those timestamps is **not** covered. slide content is marked as such, and my own explanations are marked as "why" notes so you can tell them apart. watch the videos for the rest.
 
 ## table of contents
 - [process synchronization](#process-synchronization)
-- [critical section problem (video missing)](#critical-section-problem-video-missing)
+- [the critical section problem](#the-critical-section-problem)
 - [peterson's solution](#petersons-solution)
-- [hardware solutions (video missing)](#hardware-solutions-video-missing)
+- [test and set lock](#test-and-set-lock)
 - [semaphores](#semaphores)
 - [disadvantages of semaphores](#disadvantages-of-semaphores)
 - [cheat sheet](#cheat-sheet)
@@ -72,19 +72,48 @@ apple analogy: you hold 5 apples, get 1 (6), eat 1 (5). but if two people both s
 
 ---
 
-## critical section problem (video missing)
+## the critical section problem
 
-> **no transcript was available for this lecture.** below is only what the other lectures in this chapter say, not a summary of the missing video.
+> **source: 2 screenshots (4:40 and 13:10 of 13:49), no transcript.** the slide content is marked "(slide)". the "why" notes are my reasoning, not the speaker's words.
 
-from the code in the next lecture, each process has this structure: **entry code**, then the **critical section** (where it touches shared data), then an **exit** step, then the **remainder section**.
+**the setup (slide).** a system of n processes {P0, P1, ..., Pn}. each process has a segment of code called a **critical section**, in which it may be changing common variables, updating a table, writing a file, and so on.
 
-from the solved problems and Peterson's lecture, a solution must satisfy three requirements:
+**the rule (slide).** when one process is executing in its critical section, no other process is allowed to execute in its critical section. that is, no two processes are executing in their critical sections at the same time.
 
-| requirement | meaning (as defined in the later lectures) |
-|---|---|
-| **mutual exclusion** | if process p is executing in its critical section, no other process can be executing in theirs |
-| **progress** | if no process is in its critical section and some wish to enter, only the processes **not executing in their remainder sections** take part in deciding who enters next, and the decision can't be postponed indefinitely |
-| **bounded waiting** | there is a bound on how many times others may enter their critical sections after a process has requested entry and before that request is granted |
+**the problem (slide).** design a **protocol** that the processes can use to cooperate.
+
+**the shape every process takes** (from the code in the Peterson's Solution and Test and Set Lock lectures, not from these two slides):
+
+```
+do {
+    entry section        // ask permission
+    critical section     // touch the shared data
+    exit section         // give permission back
+    remainder section    // everything else the process does
+} while (true);
+```
+
+the protocol is the entry and exit sections. the critical section is just your normal code.
+
+**why it exists (my note).** back in Process Synchronization, `counter++` was three machine steps: load, add, store. two processes interleaving those steps lost an update, so the counter ended at 4 or 6 instead of 5. if `counter++` sits inside a critical section, the three steps behave like one indivisible step, and the race disappears.
+
+**the three requirements (slide).** a solution must satisfy all three:
+
+| requirement | slide wording, shortened | plain meaning (my note) | what breaks without it |
+|---|---|---|---|
+| **mutual exclusion** | if Pi is executing in its critical section, no other process can be executing in theirs | one inside at a time | lost updates, like the counter example |
+| **progress** | if nobody is in a critical section and some processes want in, only those **not in their remainder sections** take part in deciding who goes next, and the decision can't be postponed indefinitely | a process busy with unrelated work must not block the ones who want in | the strict alternation trick: P1 wants in again but P2 is off doing other work and never takes its turn, so P1 waits forever (the first GATE 2010 problem in chapter 9 fails exactly here) |
+| **bounded waiting** | there is a bound on how many times other processes may enter their critical sections after a process has requested entry and before that request is granted | your wait is finite | starvation: others keep winning and you never get in |
+
+*Q: which requirement does "nobody ever enters" satisfy trivially? A: mutual exclusion, which is why progress exists.*
+
+**the mental model (why there are three, not one).** mutual exclusion is a **safety** rule: nothing bad happens. progress and bounded waiting are **liveness** rules: something good eventually happens. a lock that never lets anyone in is perfectly safe and perfectly useless, so you need both kinds.
+
+*Q: a solution lets P1 starve while P2 enters over and over. which requirement fails? A: bounded waiting.*
+
+**two checks:**
+1. **a protocol makes P2 wait for P1 even when P1 is in its remainder section and never wants in again. what fails, and why is that a problem in practice?** progress fails: a process outside its critical section is deciding who enters. in practice P2 hangs forever behind a process that has gone quiet.
+2. **a design guarantees every waiting process enters within at most 3 turns of others. which requirement is that, and which one does it not give you?** bounded waiting. it still needs mutual exclusion on top, because a bound on waiting says nothing about two processes being inside together.
 
 ---
 
@@ -134,11 +163,64 @@ the semicolon after the `while` means an empty body: the process **spins** there
 
 ---
 
-## hardware solutions (video missing)
+## test and set lock
 
-> **no transcript was available for this lecture.** the title above is inferred from the semaphore lecture's opening, which recaps "various hardware based solutions" that application programmers find hard to use. i'm not writing the content of that lecture here.
+> **source: 3 screenshots (6:54, 16:37 and 18:47 of 19:00), no transcript.** slide content is marked "(slide)". the "why" notes are mine. the lecture after this one (Semaphores) recaps hardware based solutions as hard for application programmers to implement, and that is what motivates semaphores.
 
-what the semaphore lecture does say: hardware based solutions are **difficult for application programmers to implement**, which motivates the software based semaphore.
+**what it is (slide).** a hardware solution to the synchronization problem.
+- there is a **shared lock variable** that can take one of two values, 0 or 1.
+- before entering the critical section, a process **inquires about the lock**.
+- if it is locked, it keeps on waiting until it becomes free.
+- if it is not locked, it takes the lock and executes the critical section.
+
+**the instruction (slide), labeled "atomic operation":**
+
+```c
+boolean TestAndSet(boolean *target) {
+    boolean rv = *target;   // remember the old value
+    *target = TRUE;         // lock it, no matter what it was
+    return rv;              // answer: what was it before?
+}
+```
+
+**how each process uses it (slide).** P1 and P2 run the same code:
+
+```c
+do {
+    while (TestAndSet(&lock));   // do nothing: spin while the old value was TRUE
+    // critical section
+    lock = FALSE;                // release the lock
+    // remainder section
+} while (TRUE);
+```
+
+**breaking the name down (my note).** "test" means read the old value, "set" means write TRUE, and the function returns the old value. so the return value answers one question: "was the lock already taken when i grabbed it?" FALSE means no, you own it now. TRUE means someone else has it, and your write of TRUE changed nothing.
+
+**why it has to be atomic (my note).** suppose read and write were two separate steps. P1 reads FALSE, P2 reads FALSE before P1 writes, both write TRUE, both see "free", and both enter. that is the same lost update race as `counter++`. the hardware executes the read and the write as one uninterruptible step, so exactly one caller can ever see FALSE.
+
+**trace with two processes** (the slides don't show the initial value of `lock`; FALSE, meaning free, is the usual starting point):
+
+| step | who | lock before | TestAndSet returns | lock after | result |
+|---|---|---|---|---|---|
+| 1 | P1 | FALSE | FALSE | TRUE | loop exits, P1 enters |
+| 2 | P2 | TRUE | TRUE | TRUE | loop continues, P2 spins |
+| 3 | P2 | TRUE | TRUE | TRUE | spins again |
+| 4 | P1 | TRUE | none | FALSE | P1 runs `lock = FALSE` on exit |
+| 5 | P2 | FALSE | FALSE | TRUE | P2 enters |
+
+*Q: why is it harmless that TestAndSet writes TRUE even when the lock was already TRUE? A: it just rewrites the same value.*
+
+**the verdict (slide).** this solution **satisfies mutual exclusion** and **does not satisfy bounded waiting**.
+
+**why bounded waiting fails (my note).** there is no queue. after P1 sets `lock = FALSE`, whoever's next `TestAndSet` call lands first wins. P1 loops straight back to the top of its `do` loop and calls it again immediately. if that call lands before P2's next spin attempt, P1 retakes the lock, and nothing limits how many times this repeats. P2 can starve even though the lock was free many times.
+
+*Q: which requirement does the slide say fails? A: bounded waiting.*
+
+**the cost (my note).** the `while (TestAndSet(&lock));` loop is busy waiting, the same spin lock cost described in the Disadvantages of Semaphores lecture below: a waiting process burns cpu doing nothing useful.
+
+**two checks:**
+1. **three processes call TestAndSet at nearly the same moment on a free lock. how many see FALSE, and why?** exactly one, because the instruction is atomic: the first one to execute it flips the lock to TRUE, and the other two get TRUE back.
+2. **someone replaces TestAndSet with `if (lock == FALSE) lock = TRUE;` written as two normal instructions. what goes wrong?** another process can slip in between the check and the set, so two processes can both see FALSE and both enter. that gap is the race the atomic instruction closes.
 
 ---
 
@@ -205,6 +287,9 @@ p0 waits for p1 and p1 waits for p0: **deadlock**.
 | race condition | outcome depends on access order | counter++ and counter-- |
 | critical section | code touching shared data | needs mutual exclusion |
 | three requirements | mutual exclusion, progress, bounded waiting | judging any solution |
+| safety vs liveness | mutual exclusion is safety; progress and bounded waiting are liveness | why one rule is never enough |
+| test and set lock | atomic instruction: returns the old lock value and sets it to TRUE | hardware spin lock; mutual exclusion yes, bounded waiting no |
+| atomic read modify write | read and write executed as one uninterruptible step | closes check then act races |
 | peterson | `flag[]` plus `turn`, two processes, software | teaching algorithm |
 | wait (P) / signal (V) | test and decrement / increment | all semaphore code |
 | binary semaphore / mutex | 0 or 1 | locks |
@@ -234,6 +319,8 @@ p0 waits for p1 and p1 waits for p0: **deadlock**.
 - (ch4) shared memory systems need the producer and consumer synchronized: which mechanism from this chapter fills that gap?
 - (ch5) threads share data by default: why are race conditions especially common there?
 - (ch7) why does a preempted process make race conditions worse in a time sharing system? (it can be stopped mid update)
+- (ch1) why can't an interrupt land in the middle of a TestAndSet? (it is a single indivisible instruction)
+- (ch7) how is test and set's missing bounded waiting like starvation in priority scheduling, and what fixed it there? (aging)
 
 ## security angle
 
@@ -241,11 +328,13 @@ p0 waits for p1 and p1 waits for p0: **deadlock**.
 - **deadlock as denial of service:** an attacker who can acquire one lock and stall can freeze others. use lock timeouts and a fixed lock order.
 - **spin locks and cpu exhaustion:** a malicious process can hold a lock and force everyone else to burn cpu.
 - **peterson on modern cpus:** memory reordering breaks the algorithm without barriers; synchronization primitives must be hardware aware.
+- **test and set closes the check then act gap:** reading a flag and then setting it in two steps is the same hole attackers use in time of check time of use bugs. an atomic read modify write removes the gap. defense: use atomic primitives, never hand rolled check then set.
+- **no bounded waiting is a starvation lever:** an attacker looping on the lock can keep winning it and starve legitimate processes. defense: fair locks with a queue, and per user limits.
 
 ## omitted chuff
 - the longer apples and bus stop analogies were shortened.
 - repeated reminders of earlier lectures (shared memory, producer consumer).
 - the lecture's detail on why dijkstra used dutch words beyond the two names.
-- the two missing lectures (critical section problem, hardware solutions) have **no notes** here; see the table at the top.
+- the critical section problem and test and set lock lectures are covered **only from screenshots**; whatever was said between the captured slides is missing, see the note at the top.
 
 *Q: one line summary? A: shared data plus concurrency needs a lock, and a lock needs care.*

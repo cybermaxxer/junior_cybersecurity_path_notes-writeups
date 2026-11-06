@@ -6,7 +6,7 @@
 
 | # | video | link | transcript status |
 |---|---|---|---|
-| 1 | *(title not in the transcript file; the next lecture calls it "the bounded buffer problem or the producer consumer problem")* | https://www.youtube.com/watch?v=Qx3P2wazwI0 | **corrupted** |
+| 1 | The Bounded Buffer Problem | https://www.youtube.com/watch?v=Qx3P2wazwI0 | **transcript corrupted; notes from 3 screenshots** |
 | 2 | The Readers Writers Problem | https://www.youtube.com/watch?v=p2XDhW5INOo | available |
 | 3 | The Dining Philosophers Problem | https://www.youtube.com/watch?v=FYUi-u7UWgw | available |
 | 4 | Monitors | https://www.youtube.com/watch?v=ufdQ0GR855M | available |
@@ -17,10 +17,10 @@
 | 9 | Process Synchronization: Problem 4 (GATE 2019) | https://www.youtube.com/watch?v=fWL8HAIrgMw | available |
 | 10 | Process Synchronization: Problem 5 (counting semaphore, GATE 1998; title not shown in the file, labeled from content) | https://www.youtube.com/watch?v=LlnBI2yjvlg | available |
 
-> **corrupted source, stated plainly:** the transcript for video 1 (bounded buffer) is garbled (the text comes out as mixed turkish and english nonsense). i can only recognize keywords: it uses **three semaphores**, a **mutex**, and "empty" and "full" counts, plus `wait` and `signal`. below i give the standard textbook solution, **clearly marked as my reconstruction, not a summary of that lecture**. the readers writers lecture confirms the problem is "solved using semaphores".
+> **partial source material, stated plainly:** the transcript for The Bounded Buffer Problem is garbled (mixed turkish and english nonsense), so that section is built from 3 screenshots of the slides (2:27, 3:59 and 15:34 of 15:47). what the speaker said between those slides is **not** covered. slide content is marked "(slide)"; my own explanations are marked as "why" notes. watch the video for the rest.
 
 ## table of contents
-- [bounded buffer problem (video corrupted)](#bounded-buffer-problem-video-corrupted)
+- [the bounded buffer problem](#the-bounded-buffer-problem)
 - [the readers writers problem](#the-readers-writers-problem)
 - [the dining philosophers problem](#the-dining-philosophers-problem)
 - [monitors](#monitors)
@@ -39,11 +39,30 @@
 
 ---
 
-## bounded buffer problem (video corrupted)
+## the bounded buffer problem
 
-**the problem (from chapter 4's shared memory lecture):** a producer fills a fixed size buffer and a consumer empties it. the producer must wait when it's full, the consumer when it's empty, and they must not touch the buffer at the same instant.
+> **source: 3 screenshots, transcript corrupted.** slide content is marked "(slide)". the "why" notes are my reasoning. this is the same producer consumer idea from chapter 4's Shared Memory Systems lecture, now solved properly with semaphores from chapter 8.
 
-> **reconstruction, not from the lecture.** standard semaphore solution, consistent with the keywords visible in the garbled transcript (a mutex, "empty", "full"):
+**the problem (slides).** the Bounded Buffer Problem, also called the Producer Consumer Problem, is one of the classic problems of synchronization.
+- there is a buffer of **n slots**, and each slot stores one unit of data.
+- two processes, **producer** and **consumer**, operate on the buffer.
+- the producer tries to insert data into an **empty** slot.
+- the consumer tries to remove data from a **filled** slot.
+
+**three rules (slide):**
+1. the producer must not insert data when the buffer is full.
+2. the consumer must not remove data when the buffer is empty.
+3. the producer and consumer must not insert and remove data simultaneously.
+
+**the solution uses three semaphores (slide):**
+
+| semaphore | type | initial value | job |
+|---|---|---|---|
+| `mutex` | binary | not visible in the captured slide; a binary lock starts at 1 (my note, the usual value) | acquire and release the lock on the buffer |
+| `empty` | counting | the number of slots in the buffer, since initially all slots are empty | counts free slots |
+| `full` | counting | 0 | counts filled slots |
+
+**the code (slide).** the producer and consumer below match the slide line for line:
 
 ```c
 semaphore mutex = 1;   // mutual exclusion on the buffer
@@ -61,7 +80,37 @@ do {                        do {
 } while (true);             } while (true);
 ```
 
-`empty` is a **counting semaphore** (n slots), `mutex` a **binary semaphore**. the order `wait(empty)` before `wait(mutex)` matters: reversing it can deadlock.
+the slide's comments: `wait(empty)` means wait until empty is above 0 and then decrement it; `signal(full)` increments full; the consumer mirrors this with `wait(full)` and `signal(empty)`.
+
+**why it works (my note): each rule gets its own semaphore.**
+
+| rule | enforced by | how |
+|---|---|---|
+| producer must not insert into a full buffer | `empty` | when no free slot is left, `empty` is 0 and `wait(empty)` blocks the producer |
+| consumer must not remove from an empty buffer | `full` | when nothing is stored, `full` is 0 and `wait(full)` blocks the consumer |
+| no simultaneous insert and remove | `mutex` | only one process holds the lock while touching the buffer |
+
+**mental model:** think of n tokens. a token is either a "free slot" token counted by `empty` or a "filled slot" token counted by `full`. producing moves a token from `empty` to `full`, consuming moves it back, so `empty + full = n` whenever nobody is mid operation.
+
+**trace with n = 2** (`empty = 2`, `full = 0`):
+
+| step | action | empty | full | what happens |
+|---|---|---|---|---|
+| 1 | consumer runs `wait(full)` | 2 | 0 | blocks: nothing to consume (rule 2) |
+| 2 | producer adds an item | 1 | 1 | `signal(full)` wakes the consumer |
+| 3 | producer adds again, consumer is slow | 0 | 2 | buffer is full |
+| 4 | producer runs `wait(empty)` | 0 | 2 | blocks: no free slot (rule 1) |
+| 5 | consumer removes one | 1 | 1 | `signal(empty)` wakes the producer |
+
+*Q: what do `empty` and `full` add up to when nobody is inside the buffer? A: n, the number of slots.*
+
+**why the order matters (my note).** the code does `wait(empty)` before `wait(mutex)`. swap them and a producer facing a full buffer takes the mutex, then sleeps on `empty` while holding it. the consumer needs the mutex to free a slot and can never get it: deadlock, the same circular wait as in the Disadvantages of Semaphores lecture.
+
+*Q: what happens if the producer takes `mutex` first and the buffer is full? A: it sleeps holding the lock, the consumer can't enter, deadlock.*
+
+**two checks:**
+1. **the buffer has 5 slots. what are `empty` and `full` at the start, and after 3 items are produced and 1 consumed?** start: `empty = 5`, `full = 0`. after 3 produced and 1 consumed: `empty = 3`, `full = 2`.
+2. **you delete `mutex` from both processes but keep `empty` and `full`. what can still go wrong?** the counters stop the buffer overflowing or underflowing, but two producers can write into the same slot at once, or a producer and consumer can touch the same slot together, corrupting data (rule 3).
 
 ---
 
@@ -358,9 +407,11 @@ $$10 - 6 + 4 = 8$$
 - **deadlock as denial of service:** philosophers waiting forever is what an attacker triggers by holding one lock and stalling. fix: timeouts, global lock ordering.
 - **monitors reduce misuse:** by centralizing locking, they cut the chance of a buggy or malicious process violating the protocol.
 - **stale reads (problem 4)** are the root of lost update bugs, including balance and counter manipulation; use atomic operations.
+- **bounded buffers are backpressure:** the size limit stops a fast producer from exhausting memory. an unbounded queue fed by an attacker is a denial of service. defense: bound every queue, drop or block when full.
+- **lock order bugs:** taking `mutex` before `empty` deadlocks the system, so a single malformed request path can freeze a service. defense: fixed acquisition order, code review of every wait sequence.
 
 ## omitted chuff
-- the bounded buffer lecture has **no notes from the lecture**, only a flagged reconstruction (corrupted transcript).
+- the bounded buffer lecture is covered **only from 3 screenshots** (the transcript is corrupted), so the speaker's walkthrough between slides is missing.
 - the long intro analogies for the dining table and bus door.
 - repeated reminders about what wait and signal mean.
 - the mid lecture detours on how to read `while(...);` with a semicolon (covered in chapter 8).
