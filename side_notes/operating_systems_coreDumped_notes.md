@@ -2,6 +2,10 @@
 
 Side notes for the Junior Cybersecurity path on Hack The Box. Source: the "Core Dumped" OS theory playlist by George, synthesized from the transcripts. Timestamps are `[MM:SS]` from each video, so you can jump straight to the spot.
 
+link to the amazing playlist you must watch (seriously, best intuition specifically if you're a visual learner)
+
+https://www.youtube.com/watch?v=7ge7u5VUSbE&list=PL9vTTBa7QaQPdvEuMTqS9McY-ieaweU8M
+
 **The whole playlist is one story:** how one CPU and one pile of RAM get shared by many programs without them wrecking each other. Each video fixes one problem the previous one created.
 
 `program` → `process` (V1) → `context switch` (V2) → `kernel mode` (V3) → `IPC` (V4) → `threads` (V5, V6) → `ABI` (V7) → `hardware assist` (V8) → `scheduling` (V9) → `race conditions` (V10) → `memory protection` (V11)
