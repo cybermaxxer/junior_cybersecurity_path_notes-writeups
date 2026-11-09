@@ -4,16 +4,14 @@
 
 **videos covered (playlist order):**
 
-| # | video | link | transcript status |
-|---|---|---|---|
-| 1 | Process Synchronization | https://www.youtube.com/watch?v=ph2awKa8r5Y | available |
-| 2 | The Critical-Section Problem | https://www.youtube.com/watch?v=UtEORPakw5Y | **no transcript; partial notes from 2 screenshots** |
-| 3 | Peterson's Solution | https://www.youtube.com/watch?v=gYCiTtgGR5Q | available |
-| 4 | Test and Set Lock | https://www.youtube.com/watch?v=5oZYS5dTrmk | **no transcript; partial notes from 3 screenshots** |
-| 5 | Semaphores | https://www.youtube.com/watch?v=XDIOC2EY5JE | available |
-| 6 | Disadvantages of Semaphores | https://www.youtube.com/watch?v=2cGo2HdA0dM | available |
-
-> **partial source material, stated plainly:** the transcript file has no transcript for videos 2 and 4 above. those two sections are built only from screenshots of the slides (The Critical-Section Problem at 4:40 and 13:10 of 13:49; Test and Set Lock at 6:54, 16:37 and 18:47 of 19:00). whatever the speaker said between those timestamps is **not** covered. slide content is marked as such, and my own explanations are marked as "why" notes so you can tell them apart. watch the videos for the rest.
+| #   | video                        | link                                        |
+| --- | ---------------------------- | ------------------------------------------- |
+| 1   | Process Synchronization      | https://www.youtube.com/watch?v=ph2awKa8r5Y |
+| 2   | The Critical-Section Problem | https://www.youtube.com/watch?v=UtEORPakw5Y |
+| 3   | Peterson's Solution          | https://www.youtube.com/watch?v=gYCiTtgGR5Q |
+| 4   | Test and Set Lock            | https://www.youtube.com/watch?v=5oZYS5dTrmk |
+| 5   | Semaphores                   | https://www.youtube.com/watch?v=XDIOC2EY5JE |
+| 6   | Disadvantages of Semaphores  | https://www.youtube.com/watch?v=2cGo2HdA0dM |
 
 ## table of contents
 - [process synchronization](#process-synchronization)

@@ -4,20 +4,18 @@
 
 **videos covered (playlist order):**
 
-| # | video | link | transcript status |
-|---|---|---|---|
-| 1 | The Bounded Buffer Problem | https://www.youtube.com/watch?v=Qx3P2wazwI0 | **transcript corrupted; notes from 3 screenshots** |
-| 2 | The Readers Writers Problem | https://www.youtube.com/watch?v=p2XDhW5INOo | available |
-| 3 | The Dining Philosophers Problem | https://www.youtube.com/watch?v=FYUi-u7UWgw | available |
-| 4 | Monitors | https://www.youtube.com/watch?v=ufdQ0GR855M | available |
-| 5 | Dining Philosophers Solution using Monitors | https://www.youtube.com/watch?v=K52NiClfvyE | available |
-| 6 | Process Synchronization: Problem 1 (GATE 2010) | https://www.youtube.com/watch?v=WIj06NCxkWE | available |
-| 7 | Process Synchronization: Problem 2 (GATE 2010) | https://www.youtube.com/watch?v=_yl0qAnsa_8 | available |
-| 8 | Process Synchronization: Problem 3 (GATE 2007; title not shown in the file, labeled from content) | https://www.youtube.com/watch?v=A41_0uRnb2A | available |
-| 9 | Process Synchronization: Problem 4 (GATE 2019) | https://www.youtube.com/watch?v=fWL8HAIrgMw | available |
-| 10 | Process Synchronization: Problem 5 (counting semaphore, GATE 1998; title not shown in the file, labeled from content) | https://www.youtube.com/watch?v=LlnBI2yjvlg | available |
-
-> **partial source material, stated plainly:** the transcript for The Bounded Buffer Problem is garbled (mixed turkish and english nonsense), so that section is built from 3 screenshots of the slides (2:27, 3:59 and 15:34 of 15:47). what the speaker said between those slides is **not** covered. slide content is marked "(slide)"; my own explanations are marked as "why" notes. watch the video for the rest.
+| #   | video                                                                                                                 | link                                        |
+| --- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| 1   | The Bounded Buffer Problem                                                                                            | https://www.youtube.com/watch?v=Qx3P2wazwI0 |
+| 2   | The Readers Writers Problem                                                                                           | https://www.youtube.com/watch?v=p2XDhW5INOo |
+| 3   | The Dining Philosophers Problem                                                                                       | https://www.youtube.com/watch?v=FYUi-u7UWgw |
+| 4   | Monitors                                                                                                              | https://www.youtube.com/watch?v=ufdQ0GR855M |
+| 5   | Dining Philosophers Solution using Monitors                                                                           | https://www.youtube.com/watch?v=K52NiClfvyE |
+| 6   | Process Synchronization: Problem 1 (GATE 2010)                                                                        | https://www.youtube.com/watch?v=WIj06NCxkWE |
+| 7   | Process Synchronization: Problem 2 (GATE 2010)                                                                        | https://www.youtube.com/watch?v=_yl0qAnsa_8 |
+| 8   | Process Synchronization: Problem 3 (GATE 2007; title not shown in the file, labeled from content)                     | https://www.youtube.com/watch?v=A41_0uRnb2A |
+| 9   | Process Synchronization: Problem 4 (GATE 2019)                                                                        | https://www.youtube.com/watch?v=fWL8HAIrgMw |
+| 10  | Process Synchronization: Problem 5 (counting semaphore, GATE 1998; title not shown in the file, labeled from content) | https://www.youtube.com/watch?v=LlnBI2yjvlg |
 
 ## table of contents
 - [the bounded buffer problem](#the-bounded-buffer-problem)
